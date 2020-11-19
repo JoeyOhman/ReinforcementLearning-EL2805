@@ -75,8 +75,8 @@ class Maze:
                 for i_m in range(self.maze.shape[0]):
                     for j_m in range(self.maze.shape[1]):
                         if self.maze[i_p, j_p] != 1:
-                            states[s] = (i_p, j_p, i_m, j_m)  # , t)
-                            map[(i_p, j_p, i_m, j_m)] = s  # , t)] = s
+                            states[s] = (i_p, j_p, i_m, j_m)
+                            map[(i_p, j_p, i_m, j_m)] = s
                             s += 1
         return states, map
 
@@ -146,7 +146,6 @@ class Maze:
                 # Stochastic transitions of minotaur, get list of next_states and list of next_probs
                 for next_outcome_idx in range(len(next_probs)):
                     next_s = next_states[next_outcome_idx]
-                    # Set t = 0, as transition probabilities are not affected by time
                     s_tup_next = self.states[next_s]
                     s_tup_next = (s_tup_next[0], s_tup_next[1], s_tup_next[2], s_tup_next[3])
                     next_s = self.map[s_tup_next]

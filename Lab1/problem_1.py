@@ -3,7 +3,7 @@ import time
 import numpy as np
 import matplotlib.pyplot as plt
 
-from maze import Maze, draw_maze, value_iteration, dynamic_programming
+from Lab1.maze import Maze, draw_maze, value_iteration, dynamic_programming
 
 HEIGHT = 7
 WIDTH = 8
