@@ -41,7 +41,7 @@ class Maze:
     MINOTAUR_REWARD = -100
     TIME_REWARD = -100
 
-    def __init__(self, maze, mino_still=False, weights=None, random_rewards=False):
+    def __init__(self, maze, mino_still=False):
         """ Constructor of the environment Maze.
         """
         self.maze = maze
@@ -51,8 +51,7 @@ class Maze:
         self.n_actions = len(self.actions)
         self.n_states = len(self.states)
         self.transition_probabilities = self.__transitions()
-        self.rewards = self.__rewards(weights=weights,
-                                      random_rewards=random_rewards)
+        self.rewards = self.__rewards()
 
     def __actions(self):
         actions = dict()
@@ -154,7 +153,7 @@ class Maze:
                     transition_probabilities[next_s, s, a] = next_p
         return transition_probabilities
 
-    def __rewards(self, weights=None, random_rewards=None):
+    def __rewards(self):
 
         rewards = np.zeros((self.n_states, self.n_actions))
 
@@ -188,28 +187,6 @@ class Maze:
                                                                            j_p_next] == 2 else self.STEP_REWARD
 
                         rewards[s, a] += outcome_reward * next_probs[next_outcome_idx]
-
-                    '''
-                    # If there exists trapped cells with probability 0.5
-                    if random_rewards and self.maze[self.states[next_s]] < 0:
-                        row, col = self.states[next_s]
-                        # With probability 0.5 the reward is
-                        r1 = (1 + abs(self.maze[row, col])) * rewards[s, a]
-                        # With probability 0.5 the reward is
-                        r2 = rewards[s, a]
-                        # The average reward
-                        rewards[s, a] = 0.5 * r1 + 0.5 * r2
-                    '''
-        # If the weights are described by a weight matrix
-        '''
-        else:
-            for s in range(self.n_states):
-                for a in range(self.n_actions):
-                    next_s = self.__move(s, a)
-                    i, j = self.states[next_s]
-                    # Simply put the reward as the weights o the next state.
-                    rewards[s, a] = weights[i][j]
-        '''
 
         return rewards
 
@@ -429,62 +406,3 @@ def draw_maze(maze, texts=None):
     for cell in tc:
         cell.set_height(1.0 / rows)
         cell.set_width(1.0 / cols)
-
-
-'''
-def animate_solution(maze, path):
-    # Map a color to each cell in the maze
-    col_map = {0: WHITE, 1: BLACK, 2: LIGHT_GREEN, -6: LIGHT_RED, -1: LIGHT_RED}
-
-    # Size of the maze
-    rows, cols = maze.shape
-
-    # Create figure of the size of the maze
-    fig = plt.figure(1, figsize=(cols, rows))
-
-    # Remove the axis ticks and add title title
-    ax = plt.gca()
-    ax.set_title('Policy simulation')
-    ax.set_xticks([])
-    ax.set_yticks([])
-
-    # Give a color to each cell
-    colored_maze = [[col_map[maze[j, i]] for i in range(cols)] for j in range(rows)]
-
-    # Create figure of the size of the maze
-    fig = plt.figure(1, figsize=(cols, rows))
-
-    # Create a table to color
-    grid = plt.table(cellText=None,
-                     cellColours=colored_maze,
-                     cellLoc='center',
-                     loc=(0, 0),
-                     edges='closed')
-
-    # Modify the hight and width of the cells in the table
-    tc = grid.properties()['children']
-    for cell in tc:
-        cell.set_height(1.0 / rows)
-        cell.set_width(1.0 / cols)
-
-    # Update the color at each frame
-    for i in range(len(path)):
-        i_p, j_p, i_m, j_m = path[i]
-        player_tuple = (i_p, j_p)
-        i_p_prev, j_p_prev, i_m_prev, j_m_prev = path[i - 1]
-        player_prev_tuple = (i_p_prev, j_p_prev)
-        grid.get_celld()[player_tuple].set_facecolor(LIGHT_ORANGE)
-        grid.get_celld()[player_tuple].get_text().set_text('Player')
-        if i > 0:
-            if path[i] == path[i - 1]:
-                grid.get_celld()[player_tuple].set_facecolor(LIGHT_GREEN)
-                grid.get_celld()[player_tuple].get_text().set_text('Player is out')
-            else:
-                grid.get_celld()[player_prev_tuple].set_facecolor(col_map[maze[player_prev_tuple]])
-                grid.get_celld()[player_prev_tuple].get_text().set_text('')
-        display.display(fig)
-        # plt.imshow(fig)
-        plt.show()
-        # display.clear_output(wait=True)
-        time.sleep(1)
-'''

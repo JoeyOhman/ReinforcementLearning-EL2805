@@ -29,9 +29,9 @@ class City:
 
     # Reward values
     STEP_REWARD = 0
-    BANK_REWARD = 10
+    BANK_REWARD = 1
     IMPOSSIBLE_REWARD = -1000
-    POLICE_REWARD = -50
+    POLICE_REWARD = -10
 
     def __init__(self, city, start_state):
         """ Constructor of the environment City.
@@ -42,8 +42,8 @@ class City:
         self.start_state = self.pos_to_state[start_state]
         self.n_actions = len(self.actions)
         self.n_states = len(self.state_to_pos)
-        self.transition_probabilities = self.__transitions()
-        self.rewards = self.__rewards()
+        # self.transition_probabilities = self.__transitions()
+        # self.rewards = self.__rewards()
 
     def __actions(self):
         actions = dict()
@@ -69,49 +69,33 @@ class City:
                         s += 1
         return state_to_pos, pos_to_state
 
-    def __next_states_police(self, player_pos_next, police_pos, player_pos):
-        # Only called when player_pos != police_pos
-        # assert player_pos != police_pos
+    def __next_state_police(self, player_pos_next, police_pos):
 
-        i_p, j_p = player_pos
-        i_o, j_o = police_pos
         i_p_next, j_p_next = player_pos_next
+        i_o, j_o = police_pos
         possible_actions = []
 
-        if i_o > 0 and i_p <= i_o:
-            possible_actions.append(self.actions[self.MOVE_UP])
-        if i_o < self.city.shape[0] - 1 and i_p >= i_o:
-            possible_actions.append(self.actions[self.MOVE_DOWN])
-        if j_o > 0 and j_p <= j_o:
-            possible_actions.append(self.actions[self.MOVE_LEFT])
-        if j_o < self.city.shape[1] - 1 and j_p >= j_o:
-            possible_actions.append(self.actions[self.MOVE_RIGHT])
+        if i_o > 0:
+            possible_actions.append(self.MOVE_UP)
+        if i_o < self.city.shape[0] - 1:
+            possible_actions.append(self.MOVE_DOWN)
+        if j_o > 0:
+            possible_actions.append(self.MOVE_LEFT)
+        if j_o < self.city.shape[1] - 1:
+            possible_actions.append(self.MOVE_RIGHT)
 
-        next_states = []
-        resets = []
-        for a in possible_actions:
-            i_o_next = i_o + a[0]
-            j_o_next = j_o + a[1]
-            if player_pos_next == (i_o_next, j_o_next):
-                next_state = self.start_state
-                reset = True
-            else:
-                next_state = self.pos_to_state[(i_p_next, j_p_next, i_o_next, j_o_next)]
-                reset = False
+        a = self.actions[np.random.choice(possible_actions)]
+        i_o_next = i_o + a[0]
+        j_o_next = j_o + a[1]
 
-            next_states.append(next_state)
-            resets.append(reset)
+        next_state = self.pos_to_state[(i_p_next, j_p_next, i_o_next, j_o_next)]
 
-        return next_states, resets
+        return next_state
 
     def __move(self, state, action):
         i_p, j_p, i_o, j_o = self.state_to_pos[state]
         player_pos = (i_p, j_p)
         police_pos = (i_o, j_o)
-
-        # If player-police collision, reset to starting state
-        # if player_pos == police_pos:
-        # return [self.start_state], [1.0]
 
         # Compute the future position given current (state, action)
         row = i_p + self.actions[action][0]
@@ -121,9 +105,10 @@ class City:
                              (col == -1) or (col == self.city.shape[1])
         # Based on the impossibility check return the next state.
         next_player_pos = player_pos if hitting_maze_walls else (row, col)
-        next_states, resets = self.__next_states_police(next_player_pos, police_pos, player_pos)
-        return next_states, [1.0 / len(next_states) for _ in next_states], resets  # Equal prob for each state
+        next_state = self.__next_state_police(next_player_pos, police_pos)
+        return next_state
 
+    '''
     def __transitions(self):
 
         # Initialize the transition probabilities tensor (S,S,A)
@@ -135,7 +120,7 @@ class City:
         # are deterministic.
         for s in range(self.n_states):
             for a in range(self.n_actions):
-                next_states, next_probs, _ = self.__move(s, a)
+                next_states, next_probs = self.__move(s, a)
                 # Stochastic transitions of police, get list of next_states and list of next_probs
                 for next_outcome_idx in range(len(next_probs)):
                     next_s = next_states[next_outcome_idx]
@@ -150,15 +135,15 @@ class City:
             i_p, j_p, i_o, j_o = self.state_to_pos[s]
             # resetting = (i_p, j_p) == (i_o, j_o)  # Reset
             for a in range(self.n_actions):
-                next_states, next_probs, resets = self.__move(s, a)
+                next_states, next_probs = self.__move(s, a)
                 for next_outcome_idx in range(len(next_probs)):
                     # Find next possible state and see if player moved
                     i_p_next, j_p_next, i_m_next, j_m_next = self.state_to_pos[next_states[next_outcome_idx]]
                     player_moved = not ((i_p, j_p) == (i_p_next, j_p_next))
 
-                    if not player_moved and a != self.STAY and not resets[next_outcome_idx]:
+                    if not player_moved and a != self.STAY:
                         outcome_reward = self.IMPOSSIBLE_REWARD
-                    elif resets[next_outcome_idx]:  # (i_p_next, j_p_next) == (i_m_next, j_m_next):
+                    elif (i_p_next, j_p_next) == (i_m_next, j_m_next):
                         outcome_reward = self.POLICE_REWARD
                     elif self.city[i_p_next][j_p_next] == 2:
                         outcome_reward = self.BANK_REWARD
@@ -168,90 +153,28 @@ class City:
                     rewards[s, a] += outcome_reward * next_probs[next_outcome_idx]
 
         return rewards
+    '''
 
-    def simulate(self, start, policy, num_steps=100):
-        path = list()
+    def observe_reward(self, s, a, next_s):
+        i_p, j_p, i_o, j_o = self.state_to_pos[s]
+        i_p_next, j_p_next, i_m_next, j_m_next = self.state_to_pos[next_s]
+        player_moved = not ((i_p, j_p) == (i_p_next, j_p_next))
 
-        # Initialize current state, next state and time
-        t = 1
-        s = self.pos_to_state[start]
-        # Add the starting position in the maze to the path
-        path.append(start)
-        # Move to next state given the policy and the current state
-        next_states, next_probs, _ = self.__move(s, policy[s])
-        next_s = np.random.choice(next_states, p=next_probs)
-        # Add the position in the maze corresponding to the next state
-        # to the path
-        path.append(self.state_to_pos[next_s])
-        # Loop while state is not the goal state
-        while t < num_steps:  # s != next_s:
-            # Update state
-            s = next_s
-            t += 1
-            # Move to next state given the policy and the current state
-            next_states, next_probs, _ = self.__move(s, policy[s])
-            next_s = np.random.choice(next_states, p=next_probs)
-            # Add the position in the maze corresponding to the next state
-            # to the path
-            path.append(self.state_to_pos[next_s])
-            # Update time and state for next iteration
-            # t += 1
-            i_p, j_p, i_o, j_o = self.state_to_pos[next_s]
-            # if (i_p, j_p) == (i_o, j_o) or self.city[i_p][j_p] == 2:
-                # break
+        if not player_moved and a != self.STAY:
+            return self.IMPOSSIBLE_REWARD
+        elif (i_p_next, j_p_next) == (i_m_next, j_m_next):
+            return self.POLICE_REWARD
+        elif self.city[i_p_next][j_p_next] == 2:
+            return self.BANK_REWARD
+        else:
+            return self.STEP_REWARD
 
-        return path
+    def simulate_step(self, s, a):
 
+        next_s = self.__move(s, a)
+        observed_reward = self.observe_reward(s, a, next_s)
 
-def value_iteration(env, gamma, epsilon):
-    # The value itearation algorithm requires the knowledge of :
-    # - Transition probabilities
-    # - Rewards
-    # - State space
-    # - Action space
-    # - The finite horizon
-    p = env.transition_probabilities
-    r = env.rewards
-    n_states = env.n_states
-    # num_states_no_t = int(n_states / env.T)
-    n_actions = env.n_actions
-
-    # Required variables and temporary ones for the VI to run
-    V = np.zeros(n_states)
-    Q = np.zeros((n_states, n_actions))
-    BV = np.zeros(n_states)
-    # Iteration counter
-    n = 0
-    # Tolerance error
-    tol = (1 - gamma) * epsilon / gamma
-
-    # Initialization of the VI
-    for s in range(n_states):
-        for a in range(n_actions):
-            Q[s, a] = r[s, a] + gamma * np.dot(p[:, s, a], V)
-    BV = np.max(Q, 1)
-
-    # Iterate until convergence
-    while np.linalg.norm(V - BV) >= tol and n < 20000:
-        # Increment by one the numbers of iteration
-        n += 1
-        if n % 100 == 0:
-            print("VI Iteration:", n)
-        # Update the value function
-        V = np.copy(BV)
-        # Compute the new BV
-        for s in range(n_states):
-            for a in range(n_actions):
-                Q[s, a] = r[s, a] + gamma * np.dot(p[:, s, a], V)
-        BV = np.max(Q, 1)
-        # Show error
-        # print(np.linalg.norm(V - BV))
-
-    # Compute policy
-    policy = np.argmax(Q, 1)
-    print("Converged in", n, "iterations")
-    # Return the obtained policy
-    return V, policy
+        return observed_reward, next_s
 
 
 def draw_city(city, texts=None):
